@@ -1,122 +1,118 @@
 import speech_recognition as sr
 import webbrowser
 import pyttsx3
+import musicLibrary
 import requests
 from openai import OpenAI
 from gtts import gTTS
 import pygame
 import os
 
-# Initialize recognizer and text-to-speech engine
+# pip install pocketsphinx
+
 recognizer = sr.Recognizer()
-engine = pyttsx3.init()
+engine = pyttsx3.init() 
+newsapi = "cecbdabedda84a5dba1e52f47b3a7006"
 
-# Initialize Pygame mixer for gTTS playback
-pygame.mixer.init()
+def speak_old(text):
+    engine.say(text)
+    engine.runAndWait()
 
-# API Keys (Replace these with your actual API keys)
-newsapi_key = "YOUR_NEWSAPI_KEY"
-openai_key = "YOUR_OPENAI_KEY"
-
-# Function to speak using Google Text-to-Speech
 def speak(text):
-    print(f"Jarvis: {text}")  # Debugging print
     tts = gTTS(text)
-    tts.save('temp.mp3')
-    
+    tts.save('temp.mp3') 
+
+    # Initialize Pygame mixer
+    pygame.mixer.init()
+
+    # Load the MP3 file
     pygame.mixer.music.load('temp.mp3')
+
+    # Play the MP3 file
     pygame.mixer.music.play()
-    
+
+    # Keep the program running until the music stops playing
     while pygame.mixer.music.get_busy():
         pygame.time.Clock().tick(10)
     
     pygame.mixer.music.unload()
-    os.remove("temp.mp3")
+    os.remove("temp.mp3") 
 
-# Function to process AI-based responses
-def ai_process(command):
-    client = OpenAI(api_key=openai_key)
-    
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a virtual assistant named Jarvis skilled in general tasks like Alexa."},
-            {"role": "user", "content": command}
-        ]
+def aiProcess(command):
+    client = OpenAI(api_key="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",
     )
-    
+
+    completion = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are a virtual assistant named jarvis skilled in general tasks like Alexa and Google Cloud. Give short responses please"},
+        {"role": "user", "content": command}
+    ]
+    )
+
     return completion.choices[0].message.content
 
-# Function to handle voice commands
-def process_command(command):
-    command = command.lower()
-
-    if "open google" in command:
+def processCommand(c):
+    if "open google" in c.lower():
         webbrowser.open("https://google.com")
-        speak("Opening Google")
-
-    elif "open facebook" in command:
+    elif "open facebook" in c.lower():
         webbrowser.open("https://facebook.com")
-        speak("Opening Facebook")
-
-    elif "open youtube" in command:
+    elif "open youtube" in c.lower():
         webbrowser.open("https://youtube.com")
-        speak("Opening YouTube")
-
-    elif "open linkedin" in command:
+    elif "open linkedin" in c.lower():
         webbrowser.open("https://linkedin.com")
-        speak("Opening LinkedIn")
+    elif c.lower().startswith("play"):
+        song = c.lower().split(" ")[1]
+        link = musicLibrary.music[song]
+        webbrowser.open(link)
 
-    elif "news" in command:
-        r = requests.get(f"https://newsapi.org/v2/top-headlines?country=in&apiKey={newsapi_key}")
-        
+    elif "news" in c.lower():
+        r = requests.get(f"https://newsapi.org/v2/everything?q=Apple&from=2025-02-07&sortBy=popularity&apiKey={newsapi}")
         if r.status_code == 200:
-            articles = r.json().get('articles', [])
-            for article in articles[:5]:  # Read first 5 headlines
+            # Parse the JSON response
+            data = r.json()
+            
+            # Extract the articles
+            articles = data.get('articles', [])
+            
+            # Print the headlines
+            for article in articles:
                 speak(article['title'])
-        else:
-            speak("Sorry, I couldn't fetch the news.")
 
     else:
-        response = ai_process(command)
-        speak(response)
+        # Let OpenAI handle the request
+        output = aiProcess(c)
+        speak(output) 
 
-# Function to listen for voice input
-def listen():
-    with sr.Microphone() as source:
-        recognizer.adjust_for_ambient_noise(source, duration=2)
-        print("Listening for 'Hey Jarvis'...")
-        
-        try:
-            audio = recognizer.listen(source, timeout=7, phrase_time_limit=5)
-            command = recognizer.recognize_google(audio).lower()
-            print(f"You said: {command}")
-            return command
-        except sr.UnknownValueError:
-            print("Could not understand the audio.")
-        except sr.RequestError:
-            print("Could not connect to the speech recognition service.")
-        except sr.WaitTimeoutError:
-            print("Listening timed out.")
 
-    return None
 
-# Main function
+
+
 if __name__ == "__main__":
-    speak("Hello Sir, I am Jarvis. Say 'Hey Jarvis' to initialize me.")
+    speak("Initializing Jarvis....")
+    while True:
+        # Listen for the wake word "Jarvis"
+        # obtain audio from the microphone
+        r = sr.Recognizer()
+         
+        print("recognizing...")
+        try:
+            with sr.Microphone(device_index=3) as source:
+                print("Listening...")
+                audio = r.listen(source, timeout=5, phrase_time_limit=10)
+            word = r.recognize_google(audio)
+            if(word.lower() == "jarvis"):
+                speak("Ya")
+                # Listen for command
+                with sr.Microphone() as source:
+                    print("Jarvis Active...")
+                    audio = r.listen(source)
+                    command = r.recognize_google(audio)
 
-    attempts = 3  # Limit retries
-    while attempts > 0:
-        command = listen()
-        if command and "hey jarvis" in command:
-            speak("Yes Sir, how can I assist you?")
-            while True:  # Infinite loop for commands
-                command = listen()
-                if command:
-                    if "exit" in command or "bye" in command:
-                        speak("Goodbye, Sir!")
-                        exit()
-                    process_command(command)
-        attempts -= 1
+                    processCommand(command)
 
-    speak("I could not detect the wake word. Please try again later.")
+
+        except Exception as e:
+            print("Error; {0}".format(e))
+
+
