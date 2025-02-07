@@ -1,9 +1,12 @@
+import os
 from openai import OpenAI
+from dotenv import load_dotenv
+
  
 # pip install openai 
 # if you saved the key under a different environment variable name, you can do something like:
 client = OpenAI(
-  api_key="<Your Key Here>",
+  api_key=(os.getenv("OPENAI_API_KEY")),
 )
 
 completion = client.chat.completions.create(
