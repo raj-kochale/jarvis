@@ -7,12 +7,16 @@ from openai import OpenAI
 from gtts import gTTS
 import pygame
 import os
+from dotenv import load_dotenv
 
 # pip install pocketsphinx
+load_dotenv()
 
 recognizer = sr.Recognizer()
 engine = pyttsx3.init() 
-newsapi = "cecbdabedda84a5dba1e52f47b3a7006"
+newsapi = os.getenv("NEWSAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
 
 def speak_old(text):
     engine.say(text)
@@ -39,7 +43,7 @@ def speak(text):
     os.remove("temp.mp3") 
 
 def aiProcess(command):
-    client = OpenAI(api_key="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",
+    client = OpenAI(api_key={openai_api_key},
     )
 
     completion = client.chat.completions.create(
